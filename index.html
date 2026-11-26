@@ -1,0 +1,1220 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>店長用シフト作成</title>
+    <style>
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2.25rem; }
+    </style>
+    <style>
+      :root{
+        --bg:#f4f1ec; --surface:#ffffff; --surface2:#faf7f2; --ink:#23201c; --ink2:#5c564d;
+        --line:#ddd5c9; --line2:#c9bfae;
+        --accent:#b3271e; --accent-ink:#ffffff; --accent-soft:#fbeae8;
+        --warn:#b3271e; --warn-bg:#fdeceb; --ok:#1e7d46; --ok-bg:#e7f4ec;
+        --sat:#2057b8; --sun:#c22f2f; --closed:#8a8378;
+        --cell-empty:#eef3f8; --wish-tint:#fff3cf;
+        --shadow:0 1px 3px rgba(35,32,28,.12);
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#171512; --surface:#221f1b; --surface2:#2a2723; --ink:#f0eadf; --ink2:#b8b0a1;
+          --line:#3d3831; --line2:#554e44;
+          --accent:#e0574d; --accent-ink:#1c0f0d; --accent-soft:#3d2320;
+          --warn:#ff8a80; --warn-bg:#40201d; --ok:#7fd6a4; --ok-bg:#1e3529;
+          --sat:#8db4f5; --sun:#ff9d97; --closed:#8a8378;
+          --cell-empty:#232a33; --wish-tint:#3d3419;
+          --shadow:0 1px 3px rgba(0,0,0,.5);
+        }
+      }
+      *{ box-sizing:border-box; }
+      html{ -webkit-text-size-adjust:100%; }
+      body{ margin:0; background:var(--bg); color:var(--ink);
+        font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,system-ui,sans-serif;
+        font-size:15px; line-height:1.55; }
+      main{ max-width:1180px; margin:0 auto; padding:14px 14px 60px; }
+      h1{ font-size:21px; margin:2px 0 4px; letter-spacing:.02em; }
+      h2{ font-size:17px; margin:0 0 8px; }
+      h3{ font-size:15px; margin:14px 0 6px; }
+      p{ margin:6px 0; }
+      .sub{ color:var(--ink2); font-size:13px; }
+      .card{ background:var(--surface); border:1px solid var(--line); border-radius:10px;
+        padding:14px; margin:14px 0; box-shadow:var(--shadow); }
+      /* flow steps */
+      .flow{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 2px; }
+      .flow span{ background:var(--surface); border:1px solid var(--line2); border-radius:999px;
+        padding:5px 11px; font-size:12.5px; font-weight:600; }
+      .flow b{ color:var(--accent); margin-right:4px; }
+      /* store tabs + month */
+      .toolbar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+      .tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+      .tabs button{ border:1px solid var(--line2); background:var(--surface); color:var(--ink);
+        border-radius:8px; padding:8px 16px; font-size:15px; font-weight:700; cursor:pointer; min-height:2.5rem; }
+      .tabs button[aria-pressed="true"]{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+      .monthnav{ display:flex; gap:6px; align-items:center; margin-left:auto; }
+      .monthnav button{ border:1px solid var(--line2); background:var(--surface); color:var(--ink);
+        border-radius:8px; padding:6px 12px; font-size:15px; cursor:pointer; min-height:2.5rem; min-width:2.5rem; }
+      .monthnav .mlabel{ font-weight:800; font-size:16px; padding:0 4px; white-space:nowrap; }
+      button.btn{ border:1px solid var(--line2); background:var(--surface); color:var(--ink);
+        border-radius:8px; padding:8px 14px; font-size:14.5px; font-weight:700; cursor:pointer; }
+      button.btn.primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+      button.btn:disabled{ opacity:.45; cursor:default; }
+      button.btn:active{ transform:translateY(1px); }
+      textarea{ width:100%; border:1px solid var(--line2); border-radius:8px; background:var(--surface2);
+        color:var(--ink); padding:10px; font-size:14px; font-family:inherit; line-height:1.5; }
+      input[type="text"], input[type="number"], input[type="time"], select{
+        border:1px solid var(--line2); border-radius:7px; background:var(--surface); color:var(--ink);
+        padding:6px 9px; font-size:14.5px; font-family:inherit; }
+      input[type="number"]{ width:4.2em; }
+      label.chk{ display:inline-flex; align-items:center; gap:7px; padding:8px 6px; cursor:pointer; font-size:14px; }
+      label.chk input{ width:20px; height:20px; accent-color:var(--accent); }
+      .row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+      .msg{ border-radius:8px; padding:9px 12px; font-size:14px; margin-top:10px; display:none; }
+      .msg.show{ display:block; }
+      .msg.good{ background:var(--ok-bg); color:var(--ok); font-weight:600; }
+      .msg.bad{ background:var(--warn-bg); color:var(--warn); font-weight:600; }
+      /* matrix */
+      .matrixwrap{ overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:var(--surface);
+        -webkit-overflow-scrolling:touch; }
+      table.matrix{ border-collapse:separate; border-spacing:0; min-width:100%; }
+      table.matrix th, table.matrix td{ border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+        padding:0; text-align:center; }
+      table.matrix thead th{ position:sticky; top:0; z-index:3; background:var(--surface2);
+        font-size:11.5px; line-height:1.25; padding:4px 0 3px; min-width:34px; }
+      table.matrix thead th .dn{ font-size:13px; font-weight:800; display:block; }
+      table.matrix thead th.short{ box-shadow:inset 0 -3px 0 var(--warn); }
+      table.matrix th.name, table.matrix td.name{ position:sticky; left:0; z-index:2; background:var(--surface);
+        min-width:118px; max-width:118px; text-align:left; padding:4px 7px; }
+      table.matrix thead th.name{ z-index:4; background:var(--surface2); font-size:12px; }
+      td.name .nm{ font-weight:700; font-size:13.5px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      td.name .tot{ color:var(--ink2); font-size:12px; font-variant-numeric:tabular-nums; }
+      td.cell{ min-width:34px; height:40px; background:var(--cell-empty); cursor:pointer; position:relative; }
+      td.cell.closed{ background:transparent; cursor:default; opacity:.45; }
+      td.cell.wish{ background:var(--wish-tint); }
+      td.cell button{ all:unset; display:flex; align-items:center; justify-content:center; width:100%; height:40px; cursor:pointer; }
+      .pat{ display:inline-block; min-width:26px; padding:2px 2px; border-radius:4px; font-size:11.5px;
+        font-weight:800; letter-spacing:.01em; line-height:1.3; }
+      .pat.off{ background:transparent; border:1px solid var(--line2); color:var(--ink2); font-weight:600; }
+      .wishmark{ font-size:11px; color:var(--ink2); font-weight:700; }
+      .wishmark.off{ color:var(--warn); }
+      .sat{ color:var(--sat); } .sun{ color:var(--sun); } .closedtxt{ color:var(--closed); }
+      /* legend */
+      .legend{ display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+      .legend .li{ display:inline-flex; align-items:center; gap:5px; font-size:12px; border:1px solid var(--line);
+        border-radius:6px; padding:3px 7px 3px 3px; background:var(--surface2); }
+      /* shortage list */
+      .shortlist{ list-style:none; margin:8px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
+      .shortlist li{ background:var(--warn-bg); color:var(--warn); font-weight:700; font-size:13px;
+        border-radius:6px; padding:5px 9px; }
+      .allok{ color:var(--ok); font-weight:700; font-size:14px; margin-top:8px; }
+      .statgrid{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+      .stat{ border:1px solid var(--line); border-radius:8px; background:var(--surface2); padding:8px 12px; min-width:128px; }
+      .stat .v{ font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; }
+      .stat .k{ font-size:12px; color:var(--ink2); }
+      /* settings tables */
+      .setgrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px; }
+      .needbox{ border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--surface2); }
+      .needbox .ttl{ font-weight:800; margin-bottom:6px; }
+      .needbox label{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; font-size:14px; }
+      .staffrow{ border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:8px 0; background:var(--surface2); }
+      .staffrow .head{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+      .staffrow .head input[type="text"]{ font-weight:700; width:11em; }
+      .chipset{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+      .chip{ border:1.5px solid var(--line2); background:var(--surface); color:var(--ink2); border-radius:999px;
+        padding:6px 11px; font-size:13px; font-weight:700; cursor:pointer; min-height:2.25rem; }
+      .chip[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+      .del{ color:var(--warn); border-color:var(--warn); background:transparent; }
+      table.patlist{ width:100%; border-collapse:collapse; font-size:13.5px; }
+      table.patlist th, table.patlist td{ border-bottom:1px solid var(--line); padding:6px 4px; text-align:left; vertical-align:middle; }
+      table.patlist input[type="number"]{ width:3.6em; }
+      table.patlist input[type="time"]{ padding:4px 5px; font-size:13px; }
+      .patlistwrap{ overflow-x:auto; }
+      /* picker sheet */
+      .sheet{ position:fixed; inset:0; z-index:50; display:none; }
+      .sheet.open{ display:block; }
+      .sheet .back{ position:absolute; inset:0; background:rgba(20,16,12,.5); }
+      .sheet .panel{ position:absolute; left:0; right:0; bottom:0; max-height:82vh; overflow-y:auto;
+        background:var(--surface); border-radius:16px 16px 0 0; padding:16px 16px 26px; box-shadow:0 -4px 24px rgba(0,0,0,.3); }
+      @media (min-width:760px){ .sheet .panel{ left:50%; right:auto; transform:translateX(-50%); width:560px; } }
+      .pickgrid{ display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+      .pickgrid button{ border:1px solid var(--line2); background:var(--surface2); color:var(--ink); border-radius:8px;
+        padding:7px 9px; cursor:pointer; text-align:left; min-height:3rem; min-width:86px; }
+      .pickgrid button .t{ display:block; font-size:11.5px; color:var(--ink2); font-weight:600; }
+      .pickgrid button.cur{ outline:3px solid var(--accent); }
+      details.more{ margin-top:6px; }
+      details.more summary{ cursor:pointer; font-weight:700; padding:8px 0; min-height:2.25rem; }
+      .hint{ font-size:12.5px; color:var(--ink2); }
+      .kbd{ font-variant-numeric:tabular-nums; }
+      /* awara-locked banner + confirm/save status */
+      .storebanner{ background:var(--accent); color:var(--accent-ink); border-radius:10px;
+        padding:12px 16px; margin-top:12px; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:baseline;
+        box-shadow:var(--shadow); }
+      .storebanner .big{ font-size:22px; font-weight:900; letter-spacing:.04em; }
+      .storebanner .note{ font-size:13px; font-weight:600; opacity:.92; }
+      .statusbar{ border-radius:8px; padding:10px 12px; font-size:14px; margin-top:10px; font-weight:700;
+        border:1px solid var(--line2); background:var(--surface2); }
+      .statusbar.locked{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
+      .savewarn{ border-radius:8px; padding:10px 12px; font-size:14px; margin-top:10px; font-weight:800;
+        background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn); display:none; }
+      .savewarn.show{ display:block; }
+      .saveok{ color:var(--ok); font-weight:700; font-size:13.5px; margin-top:8px; }
+      a.btnlink{ display:inline-flex; align-items:center; border:1px solid var(--line2); background:var(--surface);
+        color:var(--ink); border-radius:8px; padding:8px 14px; font-size:14.5px; font-weight:700;
+        text-decoration:none; min-height:2.25rem; }
+      /* environment warning (in-app browser / storage unavailable) */
+      .envwarn{ border:2px solid var(--warn); background:var(--warn-bg); color:var(--warn);
+        border-radius:10px; padding:14px 16px; margin-top:12px; display:none; }
+      .envwarn.show{ display:block; }
+      .envwarn .ttl{ font-size:17px; font-weight:900; margin-bottom:6px; }
+      .envwarn p{ font-weight:600; margin:4px 0; }
+      .envwarn ol{ margin:8px 0 2px; padding-left:1.4em; font-weight:600; }
+      .envwarn ol li{ margin:3px 0; }
+      .savecheck{ border-radius:8px; padding:9px 12px; font-size:13.5px; margin-top:10px; font-weight:700;
+        border:1px solid var(--line2); background:var(--surface2); color:var(--ink2); }
+      .savecheck.ok{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
+      button.btn.big{ font-size:16.5px; padding:14px 22px; width:100%; min-height:3.4rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>店長用シフト作成</h1>
+      <p class="sub">スタッフの希望を集めて貼るだけ。あとは自動で下書きを作り、店長が最終チェックして確定・保存まで一人で完結できます。平日と土日祝で必要人数を分けて設定できます。</p>
+      <div class="storebanner" role="note" aria-label="あわら店専用ページ">
+        <span class="big">あわら店専用</span>
+        <span class="note">このページはあわら店だけのシフト作成用です。他店の希望文を貼ると、取り込まずに止まります。</span>
+      </div>
+      <div class="envwarn" id="envWarn" role="alert">
+        <div class="ttl" id="envWarnTitle">この開き方では、入力が消えることがあります</div>
+        <p id="envWarnText"></p>
+        <ol>
+          <li>画面の「…」や共有アイコンをタップして、「Safariで開く」「他のブラウザで開く」を選ぶ</li>
+          <li>Safariで開いたら、共有ボタン（□に↑のマーク）→「ホーム画面に追加」を押す</li>
+          <li>次からはホーム画面のアイコンから開く（専用アプリのようになり、タスクキルしても保存が残ります）</li>
+        </ol>
+      </div>
+      <div class="flow" aria-label="シフト作成の流れ">
+        <span><b>1</b>希望を集める</span>
+        <span><b>2</b>貼って自動反映</span>
+        <span><b>3</b>自動で下書き作成</span>
+        <span><b>4</b>最終チェック</span>
+        <span><b>5</b>確定</span>
+        <span><b>6</b>保存してLINEで共有</span>
+      </div>
+      <div class="statusbar" role="note" aria-label="自動保存について">
+        入力は自動保存されます。名前・設定・希望・配置を変更すると、このスマホ・このブラウザの中にその場で保存され、ページを閉じて開き直しても前回の状態から再開できます。毎回同じ開き方で統一してください（例：いつもSafariで開く、またはホーム画面に追加してそこから開く）。LINEの中のブラウザとSafariでは保存場所が別になるため、開き方を変えると前回の入力が見えません。
+      </div>
+      <p class="savecheck" id="saveCheckStatus" role="status">保存チェック中…</p>
+
+      <div class="toolbar">
+        <div class="monthnav" style="margin-left:0">
+          <button type="button" id="prevMonth" aria-label="前の月">◀</button>
+          <span class="mlabel" id="monthLabel"></span>
+          <button type="button" id="nextMonth" aria-label="次の月">▶</button>
+        </div>
+      </div>
+
+      <section class="card" aria-labelledby="h-import">
+        <h2 id="h-import">1. 希望を取り込む</h2>
+        <p class="sub">スタッフが「シフト希望入力」ページで作ったLINE文を、まとめて貼ってください。「希望休：3日、6日」「昼のみ可：1日、2日」「両方可：それ以外全部」の定型文のまま読み取ります（「それ以外全部」は月曜定休と指定済みの日を除く全営業日に広げます）。1行目の店舗・月があわら店・表示中の月と違う文は、取り込まずに止めて知らせます。名前がスタッフ一覧にない人は、自動で追加されます（名前の空白の有無は同一人物として扱います）。</p>
+        <textarea id="wishText" rows="6" placeholder="ここにスタッフ全員分の希望文を貼る"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button type="button" class="btn primary" id="importWish">希望を反映する</button>
+          <button type="button" class="btn" id="clearWishText">貼り付け欄を消す</button>
+        </div>
+        <div class="msg" id="importMsg" role="status"></div>
+        <p class="sub" id="wishSummary" style="margin-top:10px"></p>
+      </section>
+
+      <section class="card" aria-labelledby="h-auto">
+        <h2 id="h-auto">2. 自動で下書きを作る</h2>
+        <p class="sub">ルール：希望休には入れない／昼のみの人は昼だけ、夜のみの人は夜だけ／両方の人で不足を埋める／必要人数を超えて入れない（余分な労働時間を作らない）／月曜定休。すでに手で入れたセルは上書きしません。</p>
+        <div class="row" style="margin-top:8px">
+          <button type="button" class="btn primary" id="autoBtn">自動作成する</button>
+          <label class="chk"><input type="checkbox" id="useNoWish"> 希望未提出の人も候補に入れる</label>
+          <button type="button" class="btn" id="clearAssign">この店の配置を全部消す</button>
+        </div>
+        <div class="msg" id="autoMsg" role="status"></div>
+        <div class="statgrid" id="statGrid"></div>
+        <div id="shortArea"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-matrix">
+        <h2 id="h-matrix">3. シフト表（最終チェック）</h2>
+        <p class="sub">セルをタップするとパターンを変更できます。薄黄色のセルは希望が出ている日、グレーの文字は希望の内容（昼・夜・両・休）です。日付の下線が赤い日は、必要人数に足りていません。</p>
+        <div class="matrixwrap" id="matrixWrap"></div>
+        <div class="legend" id="legend"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-settings">
+        <h2 id="h-settings">設定</h2>
+
+        <h3>必要人数（平日／土日祝）</h3>
+        <p class="sub">昼は11:30〜14:30、夜は17:30〜20:30に勤務が重なる人数で数えます。パターンの時間帯から自動判定します。</p>
+        <div class="setgrid">
+          <div class="needbox">
+            <div class="ttl">平日</div>
+            <label>昼の必要人数 <input type="number" id="needWdL" min="0" max="15" step="1"></label>
+            <label>夜の必要人数 <input type="number" id="needWdD" min="0" max="15" step="1"></label>
+          </div>
+          <div class="needbox">
+            <div class="ttl">土日祝</div>
+            <label>昼の必要人数 <input type="number" id="needWeL" min="0" max="15" step="1"></label>
+            <label>夜の必要人数 <input type="number" id="needWeD" min="0" max="15" step="1"></label>
+          </div>
+        </div>
+
+        <h3>スタッフと入れるパターン</h3>
+        <p class="sub">各スタッフが「入れるパターン」だけを自動作成の候補にします。チップをタップでON／OFF。</p>
+        <div id="staffSettings"></div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="newStaffName" placeholder="新しいスタッフ名" autocomplete="off">
+          <button type="button" class="btn" id="addStaff">スタッフを追加</button>
+        </div>
+
+        <details class="more">
+          <summary>パターンの時間と実働時間を変更する</summary>
+          <p class="sub">パターンはRグループ（あわら店）の設定と同一です。開始〜終了から昼・夜の判定をします。実働時間は休憩を引いた時間で、月合計の計算に使います（フル系は休憩15:00〜17:30を引いた実働、AMは昼11:00〜14:30＋夜17:30〜21:00の2部制で実働7:00）。</p>
+          <div class="patlistwrap"><table class="patlist" id="patTable"></table></div>
+        </details>
+      </section>
+
+      <section class="card" aria-labelledby="h-share">
+        <h2 id="h-share">4. 確定と保存</h2>
+        <p class="sub">最終チェックが終わったら、店長一人でここまで進めます。①確定する（表が固定され、タップ・自動作成・取り込みができなくなります）→ ②保存セットを書き出す（作業データとLINE用テキストが一緒に出ます）。入力自体は自動保存されるので、途中で閉じても開き直せば続きから再開できます。書き出しは、機種変更やブラウザのデータを消したときに備える「保険」です。</p>
+        <div class="statusbar" id="confirmStatus" role="status"></div>
+        <p class="saveok" id="autoSaveStatus" role="status">自動保存：まだ保存されていません。入力すると自動で保存されます。</p>
+        <div class="savewarn" id="saveWarn" role="status">バックアップ未作成です。入力はこのブラウザに自動保存されているので開き直しても消えませんが、万一に備えて下の「保存セットを書き出す」を押して、作業データとLINE用テキストを控えてください。</div>
+        <p class="saveok" id="saveOk" style="display:none"></p>
+        <div class="row" style="margin-top:10px">
+          <button type="button" class="btn primary" id="confirmBtn">確定する（表を固定）</button>
+          <button type="button" class="btn" id="unconfirmBtn">確定を取り消す</button>
+          <button type="button" class="btn primary" id="saveSetBtn">保存セットを書き出す</button>
+        </div>
+        <div class="msg" id="confirmMsg" role="status"></div>
+
+        <h3>保険用バックアップ（ワンタップでコピー）</h3>
+        <p class="sub">確定したら、下のボタンを押してください。今の入力すべて（作業データ）がそのままコピーされます。コピーしたら、自分のLINEのKeepメモや自分だけのトークに貼って保管してください。スマホを替えたときや、万一保存が消えたときでも、その文を下の「作業データの読み込み」に貼れば元に戻せます。</p>
+        <button type="button" class="btn primary big" id="backupCopyBtn">保存データをコピーする</button>
+        <div class="msg" id="backupMsg" role="status"></div>
+
+        <h3>シフト表を画像で書き出す（グループLINE用）</h3>
+        <p class="sub">確定した表を、Rグループと同じ見た目の1枚の画像（PNG）にします。スタッフ用画像は「シフト表（色付きパターン＋名前の横に月合計）＋パターン一覧」だけです。割り当て人数の確認は、このページのシフト表と不足一覧で店長がチェックしてください。この画像1枚を保存して、あわら店のグループLINEに送れば全員に届きます（1人ずつ文章で送る必要はありません）。</p>
+        <div class="row">
+          <button type="button" class="btn primary" id="imgBtn">シフト表を画像で書き出す</button>
+          <a class="btnlink" id="shiftImgDl" style="display:none" download="shift.png">画像をダウンロード</a>
+        </div>
+        <div class="msg" id="imgMsg" role="status"></div>
+        <div id="shiftImgWrap" style="display:none; margin-top:10px">
+          <img id="shiftImg" alt="あわら店シフト表の画像プレビュー" style="max-width:100%; height:auto; border:1px solid var(--line); border-radius:8px">
+          <p class="sub">スマホでは上の「画像をダウンロード」か、画像を長押しして保存し、グループLINEに添付してください。</p>
+        </div>
+
+        <h3>確定シフトをLINEで送る（文章・保存用）</h3>
+        <p class="sub">配置が入っている日だけを、1人ずつまとめた文にします。スタッフへの連絡は上の画像が本命で、こちらは控え・保存用です。</p>
+        <div class="row">
+          <button type="button" class="btn primary" id="makeLine">LINE用テキストを作る</button>
+          <button type="button" class="btn" id="copyLine" disabled>コピーする</button>
+        </div>
+        <textarea id="lineText" rows="7" style="margin-top:10px" placeholder="「LINE用テキストを作る」を押すとここに出ます" readonly></textarea>
+        <div class="msg" id="copyMsg" role="status"></div>
+
+        <h3>作業データの書き出し／読み込み（保険用）</h3>
+        <p class="sub">入力はこのスマホ・このブラウザに自動保存され、開き直しても前回の続きから再開できます。書き出し／読み込みは保険用です。機種変更したときや、ブラウザのデータを消してしまったときは、控えておいた作業データをここに貼って読み込むと元に戻せます（あわら店分だけが保存されます）。普段は書き出しの手間はいりません。</p>
+        <div class="row">
+          <button type="button" class="btn" id="exportData">作業データを書き出す</button>
+          <button type="button" class="btn" id="copyData" disabled>コピーする</button>
+          <button type="button" class="btn" id="importData">貼ったデータを読み込む</button>
+        </div>
+        <textarea id="dataText" rows="5" style="margin-top:10px" placeholder="書き出すとここに出ます。再開するときは控えたデータをここに貼って「読み込む」"></textarea>
+        <div class="msg" id="dataMsg" role="status"></div>
+      </section>
+
+      <p class="sub">運用メモ：月曜定休（祝日の場合は翌火曜も休みになる運用は、日付をタップして全員「ー」にしてください）。朝礼10:50・夕礼17:25は各パターンの開始前に実施します。</p>
+    </main>
+
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="back" id="sheetBack"></div>
+      <div class="panel">
+        <h2 id="sheetTitle">パターンを選ぶ</h2>
+        <p class="sub" id="sheetInfo"></p>
+        <div class="pickgrid" id="pickGrid"></div>
+        <div class="row" style="margin-top:14px">
+          <button type="button" class="btn" id="sheetClose">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    'use strict';
+    /* ---------- master data ---------- */
+    var WD = ['日','月','火','水','木','金','土'];
+    // patterns: Awara's actual R-GROUP set (confirmed by the manager's pattern-setting screens).
+    // name = R-GROUP pattern name, start/end minutes, hours = actual working hours (breaks deducted),
+    // band = lunch-only / dinner-only / full, colors matched to the R-GROUP screenshots.
+    var PATTERNS = [
+      {code:'A',  name:'9時',            start:510,  end:900,  hours:6.5,  band:'lunch',  bg:'#ee1111', fg:'#ffffff'},
+      {code:'C',  name:'11時',           start:660,  end:900,  hours:4,    band:'lunch',  bg:'#ee5b9d', fg:'#ffffff'},
+      {code:'D',  name:'11時半',         start:690,  end:900,  hours:3.5,  band:'lunch',  bg:'#e012e0', fg:'#ffffff'},
+      {code:'DD', name:'12時',           start:720,  end:810,  hours:1.5,  band:'lunch',  bg:'#a93fb5', fg:'#ffffff'},
+      {code:'BI', name:'10時〜15時',     start:600,  end:900,  hours:5,    band:'lunch',  bg:'#f6c453', fg:'#4a3200'},
+      {code:'GG', name:'学園昼',         start:660,  end:900,  hours:4,    band:'lunch',  bg:'#b5e048', fg:'#2c4405'},
+      {code:'MH', name:'昼松岡店ヘルプ', start:660,  end:900,  hours:4,    band:'lunch',  bg:'#e0218a', fg:'#ffffff'},
+      {code:'E',  name:'17時半',         start:1050, end:1260, hours:3.5,  band:'dinner', bg:'#5b8def', fg:'#ffffff'},
+      {code:'F',  name:'18時',           start:1080, end:1260, hours:3,    band:'dinner', bg:'#4fb3e3', fg:'#06334a'},
+      {code:'K',  name:'17時45分',       start:1065, end:1260, hours:3.25, band:'dinner', bg:'#87a02c', fg:'#ffffff'},
+      {code:'GY', name:'学園夜',         start:1050, end:1260, hours:3.5,  band:'dinner', bg:'#4fe0b8', fg:'#0b3d2e'},
+      {code:'FF', name:'18時半',         start:1110, end:1260, hours:2.5,  band:'dinner', bg:'#1593b0', fg:'#ffffff'},
+      {code:'BD', name:'10時フル',       start:600,  end:1260, hours:8.5,  band:'full',   bg:'#f0e62e', fg:'#3d3800'},
+      {code:'GH', name:'学園フル',       start:660,  end:1260, hours:7.5,  band:'full',   bg:'#57e657', fg:'#0d3d0d'},
+      {code:'BB', name:'アルバイトフル', start:660,  end:1260, hours:7.5,  band:'full',   bg:'#ecd096', fg:'#4d3a08'},
+      {code:'DE', name:'11時半フル',     start:690,  end:1260, hours:7,    band:'full',   bg:'#11608f', fg:'#ffffff'},
+      {code:'AM', name:'あわら昼・松岡夜', start:660, end:1260, hours:7,   band:'full',   bg:'#63b8e8', fg:'#08334d', split:true, timeText:'11:00〜14:30＋17:30〜21:00'}
+    ];
+    var OFF = 'ー';
+    var STORE_NAME = 'あわら店'; // this page is locked to Awara only
+    var STORES = [STORE_NAME];
+    var DEFAULT_PATS = ['A','C','D','BI','E','F','K','FF'];
+    // 2026-2027 Japanese holidays that can fall in a shift month (Mon handled as closed anyway)
+    var HOLIDAYS = {'2026-11-23':1,'2026-12-25':0,'2027-1-1':1,'2027-1-11':1,'2027-2-11':1,'2027-3-20':1};
+
+    function patByCode(code){ for (var i=0;i<PATTERNS.length;i++) if (PATTERNS[i].code===code) return PATTERNS[i]; return null; }
+    function fmtTime(m){ if(m==null) return ''; var h=Math.floor(m/60), mm=m%60; return h+':'+('0'+mm).slice(-2); }
+    function patTimeText(p){
+      if (p.timeText) return p.timeText;
+      if (p.start==null) return '';
+      return fmtTime(p.start)+'〜'+fmtTime(p.end);
+    }
+    function patLabel(p){ return (p.name ? p.name+' ' : '') + patTimeText(p); }
+    function covers(p, band){
+      if (p.start==null) return false;
+      if (band==='lunch') return p.start < 870 && p.end > 690;   // overlaps 11:30-14:30
+      return p.start < 1230 && p.end > 1050;                      // overlaps 17:30-20:30
+    }
+    function fmtHours(h){
+      var total = Math.round(h*60), hh = Math.floor(total/60), mm = total%60;
+      return hh+':'+('0'+mm).slice(-2);
+    }
+
+    /* ---------- state (auto-saved to this browser) ---------- */
+    var LS_KEY = 'awaraShiftManagerAutoSaveV1';
+    var lastAutoSavedAt = '';
+    function fmtAutoTime(iso){
+      if (!iso) return '';
+      var dt = new Date(iso);
+      if (isNaN(dt.getTime())) return '';
+      return (dt.getMonth()+1)+'/'+dt.getDate()+' '+('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2)+':'+('0'+dt.getSeconds()).slice(-2);
+    }
+    function updateAutoSaveStatus(){
+      var el = document.getElementById('autoSaveStatus');
+      if (!el) return;
+      if (lastAutoSavedAt) el.textContent = '自動保存済み：'+fmtAutoTime(lastAutoSavedAt)+' にこのブラウザへ保存しました。閉じて開き直しても続きから再開できます。';
+      else el.textContent = '自動保存：まだ保存されていません。入力すると自動で保存されます。';
+    }
+    function persistAuto(){
+      try {
+        var data = { v:3, store: STORE_NAME, year: state.year, month: state.month, stores: state.stores,
+          patterns: PATTERNS.map(function(p){ return {code:p.code, start:p.start, end:p.end, hours:p.hours}; }),
+          autoSavedAt: new Date().toISOString() };
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+        lastAutoSavedAt = data.autoSavedAt;
+        updateAutoSaveStatus();
+      } catch(e){ /* storage unavailable (private mode etc.): export/import still works */ }
+    }
+    function restoreAuto(){
+      try {
+        var raw = localStorage.getItem(LS_KEY);
+        if (!raw) return false;
+        var data = JSON.parse(raw);
+        if (!data || !data.stores || !data.stores[STORE_NAME]) return false;
+        var got = data.stores[STORE_NAME];
+        if (!got.staff || !got.staff.length) return false;
+        got.canDo = got.canDo || {}; got.months = got.months || {};
+        got.needs = got.needs || {wdL:2, wdD:2, weL:3, weD:3};
+        state.stores[STORE_NAME] = got;
+        if (data.year && data.month){ state.year = data.year; state.month = data.month; }
+        if (data.patterns) data.patterns.forEach(function(sp){
+          var p = patByCode(sp.code); if (p && typeof sp.hours === 'number'){ p.start = sp.start; p.end = sp.end; p.hours = sp.hours; }
+        });
+        if (data.autoSavedAt) lastAutoSavedAt = data.autoSavedAt;
+        return true;
+      } catch(e){ return false; }
+    }
+    function emptyStore(){
+      return { staff:[], canDo:{}, needs:{wdL:2, wdD:2, weL:3, weD:3}, months:{} };
+    }
+    var state = { store: STORE_NAME, year: 2026, month: 12, stores: {} };
+    STORES.forEach(function(s){ state.stores[s] = emptyStore(); });
+    // starter example staff so the matrix shape is visible; the manager replaces them with real names in 設定
+    state.stores[STORE_NAME].staff = ['スタッフA','スタッフB','スタッフC'];
+    STORES.forEach(function(s){
+      state.stores[s].staff.forEach(function(n){
+        state.stores[s].canDo[n] = {};
+        DEFAULT_PATS.forEach(function(c){ state.stores[s].canDo[n][c] = 1; });
+      });
+    });
+
+    function S(){ return state.stores[state.store]; }
+    function M(){
+      var st = S(), key = state.year+'-'+state.month;
+      if (!st.months[key]) st.months[key] = { cells:{}, wish:{}, memo:{}, confirmed:false, saved:true, savedAt:'' };
+      var m = st.months[key];
+      if (!m.memo) m.memo = {};
+      if (typeof m.confirmed !== 'boolean') m.confirmed = false;
+      if (typeof m.saved !== 'boolean') m.saved = true;
+      return m;
+    }
+    function isConfirmed(){ return !!M().confirmed; }
+    function markDirty(){ var m = M(); m.saved = false; m.savedAt = ''; persistAuto(); }
+    function daysInMonth(){ return new Date(state.year, state.month, 0).getDate(); }
+    function dateKey(d){ return state.year+'-'+state.month+'-'+d; }
+    function dowOf(d){ return new Date(state.year, state.month-1, d).getDay(); }
+    function isClosed(d){ return dowOf(d)===1; } // Monday
+    function isWeekend(d){
+      var w = dowOf(d);
+      return w===0 || w===6 || HOLIDAYS[state.year+'-'+state.month+'-'+d]===1;
+    }
+    function needsFor(d){
+      var n = S().needs;
+      return isWeekend(d) ? {lunch:n.weL, dinner:n.weD} : {lunch:n.wdL, dinner:n.wdD};
+    }
+    function getCell(name, d){ var c = M().cells[name]; return c ? (c[d] || null) : null; }
+    function setCell(name, d, val){
+      if (!M().cells[name]) M().cells[name] = {};
+      if (val) M().cells[name][d] = val; else delete M().cells[name][d];
+      markDirty();
+    }
+    function normName(nm){ return String(nm == null ? '' : nm).replace(/[\s　]+/g, ''); }
+    function findStaff(nm){
+      var target = normName(nm);
+      if (!target) return null;
+      var list = S().staff;
+      for (var i=0;i<list.length;i++) if (normName(list[i]) === target) return list[i];
+      return null;
+    }
+    function getWish(name, d){ var w = M().wish[name]; return w ? (w[d] || null) : null; }
+    function staffHours(name){
+      var c = M().cells[name] || {}, total = 0;
+      for (var d in c){ var p = patByCode(c[d]); if (p) total += p.hours; }
+      return total;
+    }
+    function dayCounts(d){
+      var lunch = 0, dinner = 0;
+      S().staff.forEach(function(n){
+        var code = getCell(n, d); if (!code) return;
+        var p = patByCode(code); if (!p) return;
+        if (covers(p,'lunch')) lunch++;
+        if (covers(p,'dinner')) dinner++;
+      });
+      return {lunch:lunch, dinner:dinner};
+    }
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function $(id){ return document.getElementById(id); }
+    function showMsg(el, text, good){
+      el.textContent = text; el.className = 'msg show ' + (good ? 'good' : 'bad');
+      if (!text) el.className = 'msg';
+    }
+    </script>
+    <script>
+    'use strict';
+    var WISH_SHORT = {lunch:'昼', dinner:'夜', both:'両', off:'休'};
+    function renderLockState(){
+      var m = M(), locked = !!m.confirmed, saved = !!m.saved;
+      var el = $('confirmStatus');
+      el.className = 'statusbar' + (locked ? ' locked' : '');
+      el.textContent = state.year+'年'+state.month+'月（あわら店）：' +
+        (locked ? '確定済み（表は固定されています）' : '未確定（まだ編集できます）') +
+        ' ／ ' + (saved ? '保存済み' : '未保存');
+      $('saveWarn').className = 'savewarn' + (saved ? '' : ' show');
+      var ok = $('saveOk');
+      if (saved && m.savedAt){ ok.style.display = 'block'; ok.textContent = '保存済み：'+m.savedAt+' に保存セットを書き出しました。'; }
+      else ok.style.display = 'none';
+      $('confirmBtn').disabled = locked;
+      $('unconfirmBtn').disabled = !locked;
+      updateAutoSaveStatus();
+    }
+    function renderMonth(){ $('monthLabel').textContent = state.year+'年'+state.month+'月'; }
+    function renderMatrix(){
+      var st = S(), n = daysInMonth(), d, i;
+      var html = '<table class="matrix"><thead><tr><th class="name">スタッフ / 合計</th>';
+      for (d=1; d<=n; d++){
+        var w = dowOf(d), cls = isClosed(d) ? 'closedtxt' : (w===0||HOLIDAYS[state.year+'-'+state.month+'-'+d]===1 ? 'sun' : (w===6 ? 'sat' : ''));
+        var cnt = dayCounts(d), need = needsFor(d);
+        var short = !isClosed(d) && (cnt.lunch < need.lunch || cnt.dinner < need.dinner);
+        html += '<th class="'+(short?'short':'')+'"><span class="dn '+cls+'">'+d+'</span><span class="'+cls+'">'+WD[w]+'</span></th>';
+      }
+      html += '</tr></thead><tbody>';
+      st.staff.forEach(function(name){
+        html += '<tr><td class="name"><span class="nm">'+esc(name)+'</span><span class="tot">'+fmtHours(staffHours(name))+'</span></td>';
+        for (d=1; d<=n; d++){
+          if (isClosed(d)){ html += '<td class="cell closed"></td>'; continue; }
+          var code = getCell(name, d), wish = getWish(name, d);
+          var inner = '';
+          if (code === OFF) inner = '<span class="pat off">ー</span>';
+          else if (code){ var p = patByCode(code); inner = p ? '<span class="pat" style="background:'+p.bg+';color:'+p.fg+'">'+esc(p.code)+'</span>' : ''; }
+          else if (wish) inner = '<span class="wishmark'+(wish==='off'?' off':'')+'">'+WISH_SHORT[wish]+'</span>';
+          html += '<td class="cell'+(wish&&!code?' wish':'')+'"><button type="button" data-name="'+esc(name)+'" data-day="'+d+'" aria-label="'+esc(name)+' '+state.month+'月'+d+'日">'+inner+'</button></td>';
+        }
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      $('matrixWrap').innerHTML = html;
+      var btns = $('matrixWrap').querySelectorAll('td.cell button');
+      for (i=0;i<btns.length;i++) btns[i].addEventListener('click', function(){
+        openPicker(this.getAttribute('data-name'), parseInt(this.getAttribute('data-day'),10));
+      });
+      var lg = '';
+      PATTERNS.forEach(function(p){
+        lg += '<span class="li"><span class="pat" style="background:'+p.bg+';color:'+p.fg+'">'+esc(p.code)+'</span>'+esc(patLabel(p))+'</span>';
+      });
+      lg += '<span class="li"><span class="pat off">ー</span>休み</span>';
+      $('legend').innerHTML = lg;
+      renderStats();
+    }
+    function renderStats(){
+      var st = S(), n = daysInMonth(), d;
+      var totalH = 0, days = 0, shortList = [];
+      st.staff.forEach(function(name){ totalH += staffHours(name); });
+      for (d=1; d<=n; d++){
+        if (isClosed(d)) continue;
+        days++;
+        var cnt = dayCounts(d), need = needsFor(d);
+        if (cnt.lunch < need.lunch) shortList.push(state.month+'/'+d+'('+WD[dowOf(d)]+') 昼 あと'+(need.lunch-cnt.lunch)+'名');
+        if (cnt.dinner < need.dinner) shortList.push(state.month+'/'+d+'('+WD[dowOf(d)]+') 夜 あと'+(need.dinner-cnt.dinner)+'名');
+      }
+      $('statGrid').innerHTML =
+        '<div class="stat"><div class="v">'+fmtHours(totalH)+'</div><div class="k">店舗の合計労働時間</div></div>' +
+        '<div class="stat"><div class="v">'+st.staff.length+'名</div><div class="k">スタッフ数</div></div>' +
+        '<div class="stat"><div class="v">'+days+'日</div><div class="k">営業日（月曜定休を除く）</div></div>';
+      if (shortList.length===0) $('shortArea').innerHTML = '<p class="allok">必要人数は全日そろっています。</p>';
+      else $('shortArea').innerHTML = '<ul class="shortlist">' + shortList.map(function(x){ return '<li>不足：'+esc(x)+'</li>'; }).join('') + '</ul>';
+      var wcount = 0, wnames = 0;
+      for (var nm in M().wish){ var c = 0; for (var dd in M().wish[nm]) c++; if (c>0){ wnames++; wcount += c; } }
+      var memoParts = [];
+      for (var mn in M().memo){ if (M().memo[mn]) memoParts.push(mn+'：'+M().memo[mn]); }
+      $('wishSummary').textContent = (wcount>0 ? ('取り込み済みの希望：'+wnames+'名・'+wcount+'件（シフト表の薄黄色セルに表示）') : '希望はまだ取り込まれていません。') +
+        (memoParts.length ? ' ／ メモ：'+memoParts.join(' ／ ') : '');
+    }
+    function renderNeeds(){
+      var nd = S().needs;
+      $('needWdL').value = nd.wdL; $('needWdD').value = nd.wdD;
+      $('needWeL').value = nd.weL; $('needWeD').value = nd.weD;
+    }
+    function bindNeeds(){
+      var map = {needWdL:'wdL', needWdD:'wdD', needWeL:'weL', needWeD:'weD'};
+      for (var id in map){ (function(id, key){
+        $(id).addEventListener('change', function(){
+          var v = parseInt(this.value, 10); if (isNaN(v) || v<0) v = 0;
+          S().needs[key] = v; this.value = v; markDirty(); renderMatrix(); renderLockState();
+        });
+      })(id, map[id]); }
+    }
+    function renderStaffSettings(){
+      var st = S(), html = '';
+      st.staff.forEach(function(name, idx){
+        html += '<div class="staffrow"><div class="head">' +
+          '<input type="text" value="'+esc(name)+'" data-rename="'+idx+'" aria-label="スタッフ名">' +
+          '<span class="sub">月合計 <b class="kbd">'+fmtHours(staffHours(name))+'</b></span>' +
+          '<button type="button" class="btn del" data-del="'+idx+'">削除</button></div>' +
+          '<div class="chipset" data-chips="'+idx+'">';
+        PATTERNS.forEach(function(p){
+          var on = st.canDo[name] && st.canDo[name][p.code];
+          html += '<button type="button" class="chip" data-code="'+p.code+'" aria-pressed="'+!!on+'">'+esc(p.code)+'</button>';
+        });
+        html += '</div></div>';
+      });
+      if (st.staff.length===0) html = '<p class="sub">スタッフがまだいません。下から追加してください。</p>';
+      $('staffSettings').innerHTML = html;
+      var i, renames = $('staffSettings').querySelectorAll('[data-rename]');
+      for (i=0;i<renames.length;i++) renames[i].addEventListener('change', function(){
+        var idx = parseInt(this.getAttribute('data-rename'),10), old = S().staff[idx], nw = this.value.trim();
+        if (!nw || nw===old){ this.value = old; return; }
+        var ex = findStaff(nw); if (ex && ex !== old){ this.value = old; return; }
+        S().staff[idx] = nw;
+        markDirty();
+        if (S().canDo[old]){ S().canDo[nw] = S().canDo[old]; delete S().canDo[old]; }
+        for (var mk in S().months){
+          ['cells','wish','memo'].forEach(function(k){
+            var bucket = S().months[mk][k];
+            if (bucket && bucket[old]){ bucket[nw] = bucket[old]; delete bucket[old]; }
+          });
+        }
+        persistAuto();
+        renderAll();
+      });
+      var dels = $('staffSettings').querySelectorAll('[data-del]');
+      for (i=0;i<dels.length;i++) dels[i].addEventListener('click', function(){
+        var idx = parseInt(this.getAttribute('data-del'),10), nm = S().staff[idx];
+        markDirty();
+        S().staff.splice(idx,1);
+        delete S().canDo[nm];
+        for (var mk in S().months){ delete S().months[mk].cells[nm]; delete S().months[mk].wish[nm]; if (S().months[mk].memo) delete S().months[mk].memo[nm]; }
+        persistAuto();
+        renderAll();
+      });
+      var chipsets = $('staffSettings').querySelectorAll('[data-chips]');
+      for (i=0;i<chipsets.length;i++) (function(box){
+        var idx = parseInt(box.getAttribute('data-chips'),10), name = S().staff[idx];
+        var chips = box.querySelectorAll('.chip');
+        for (var j=0;j<chips.length;j++) chips[j].addEventListener('click', function(){
+          var code = this.getAttribute('data-code');
+          if (!S().canDo[name]) S().canDo[name] = {};
+          if (S().canDo[name][code]) delete S().canDo[name][code]; else S().canDo[name][code] = 1;
+          markDirty(); renderLockState();
+          this.setAttribute('aria-pressed', !!S().canDo[name][code]);
+        });
+      })(chipsets[i]);
+    }
+    function renderPatTable(){
+      var html = '<tr><th>コード</th><th>内容</th><th>開始</th><th>終了</th><th>実働(時間)</th></tr>';
+      PATTERNS.forEach(function(p, i){
+        var timeCells = p.split
+          ? '<td colspan="2">'+esc(p.timeText)+'（2部制）</td>'
+          : '<td>'+(p.start!=null ? '<input type="time" data-pi="'+i+'" data-f="start" value="'+fmtTime(p.start)+'">' : '―')+'</td>' +
+            '<td>'+(p.end!=null ? '<input type="time" data-pi="'+i+'" data-f="end" value="'+fmtTime(p.end)+'">' : '―')+'</td>';
+        html += '<tr><td><span class="pat" style="background:'+p.bg+';color:'+p.fg+'">'+esc(p.code)+'</span></td>' +
+          '<td>'+esc(p.name || '')+'</td>' + timeCells +
+          '<td><input type="number" data-pi="'+i+'" data-f="hours" min="0" max="24" step="0.25" value="'+p.hours+'"></td></tr>';
+      });
+      $('patTable').innerHTML = html;
+      var inputs = $('patTable').querySelectorAll('input');
+      for (var i=0;i<inputs.length;i++) inputs[i].addEventListener('change', function(){
+        var p = PATTERNS[parseInt(this.getAttribute('data-pi'),10)], f = this.getAttribute('data-f');
+        if (f==='hours'){ var v = parseFloat(this.value); p.hours = (isNaN(v)||v<0) ? 0 : v; }
+        else { var parts = this.value.split(':'); if (parts.length===2) p[f] = parseInt(parts[0],10)*60 + parseInt(parts[1],10); }
+        markDirty(); renderMatrix(); renderLockState();
+      });
+    }
+    function renderAll(){ renderMonth(); renderNeeds(); renderMatrix(); renderStaffSettings(); renderPatTable(); renderLockState(); }
+
+    /* ---------- picker sheet ---------- */
+    var pickName = null, pickDay = null;
+    function openPicker(name, d){
+      pickName = name; pickDay = d;
+      if (isConfirmed()){
+        $('sheetTitle').textContent = name+' ／ '+state.month+'月'+d+'日('+WD[dowOf(d)]+')';
+        $('sheetInfo').textContent = '確定済みのため変更できません。変更するときは「4. 確定と保存」で確定を取り消してください。';
+        $('pickGrid').innerHTML = '';
+        $('sheet').classList.add('open');
+        return;
+      }
+      var wish = getWish(name, d), cur = getCell(name, d);
+      $('sheetTitle').textContent = name+' ／ '+state.month+'月'+d+'日('+WD[dowOf(d)]+')';
+      $('sheetInfo').textContent = '希望：' + (wish ? {lunch:'昼のみ', dinner:'夜のみ', both:'両方可', off:'希望休'}[wish] : '未提出') +
+        (isWeekend(d) ? ' ／ 土日祝の必要人数で判定' : '');
+      var html = '';
+      PATTERNS.forEach(function(p){
+        html += '<button type="button" data-pick="'+p.code+'" class="'+(cur===p.code?'cur':'')+'"><span class="pat" style="background:'+p.bg+';color:'+p.fg+'">'+esc(p.code)+'</span><span class="t">'+esc(patLabel(p))+' ・ '+fmtHours(p.hours)+'</span></button>';
+      });
+      html += '<button type="button" data-pick="'+OFF+'" class="'+(cur===OFF?'cur':'')+'"><span class="pat off">ー</span><span class="t">休み</span></button>';
+      html += '<button type="button" data-pick="" class="'+(!cur?'cur':'')+'">消す<span class="t">未配置に戻す</span></button>';
+      $('pickGrid').innerHTML = html;
+      var btns = $('pickGrid').querySelectorAll('[data-pick]');
+      for (var i=0;i<btns.length;i++) btns[i].addEventListener('click', function(){
+        var v = this.getAttribute('data-pick');
+        setCell(pickName, pickDay, v ? v : null);
+        closePicker(); renderMatrix(); renderStaffSettings(); renderLockState();
+      });
+      $('sheet').classList.add('open');
+    }
+    function closePicker(){ $('sheet').classList.remove('open'); }
+    $('sheetBack').addEventListener('click', closePicker);
+    $('sheetClose').addEventListener('click', closePicker);
+
+    /* ---------- wish import ---------- */
+    function wishFromWord(w){
+      if (/希望休|休み|休/.test(w)) return 'off';
+      if (/両方|終日|両可/.test(w)) return 'both';
+      if (/昼/.test(w)) return 'lunch';
+      if (/夜/.test(w)) return 'dinner';
+      return null;
+    }
+    // pull every day number out of a category value like "3日、6日、8日" (also bare "3, 6")
+    function parseDayList(val){
+      var days = [], m, re = /(\d{1,2})\s*日/g;
+      while ((m = re.exec(val)) !== null){ var d = parseInt(m[1],10); if (d>=1 && d<=31) days.push(d); }
+      if (days.length===0){
+        var parts = String(val).split(/[、,・\s　]+/);
+        for (var i=0;i<parts.length;i++){ var n = parseInt(parts[i],10); if (!isNaN(n) && String(n)===parts[i].trim() && n>=1 && n<=31) days.push(n); }
+      }
+      return days;
+    }
+    function importWishes(){
+      var text = $('wishText').value, st = S();
+      if (!text.trim()){ showMsg($('importMsg'), '希望文が貼られていません。', false); return; }
+      if (isConfirmed()){ showMsg($('importMsg'), '確定済みのため取り込めません。「4. 確定と保存」で確定を取り消してから貼ってください。', false); return; }
+      var lines = text.split(/\r?\n/);
+      /* Pass 1: split into per-person blocks and validate store / month headers.
+         Template format (from the staff input page):
+           あわら店 2026年12月
+           名前：中澤妃佐恵
+           希望休：3日、6日…
+           昼のみ可：1日、2日
+           夜のみ可：
+           両方可：それ以外全部
+           メモ：…
+         The legacy "名前 12/5 昼" line format is still accepted inside a block. */
+      var blocks = [], cur = null, mismatch = null;
+      function newBlock(){ cur = { name:null, entries:{}, memo:'', expandBoth:false, store:null, year:null, month:null }; blocks.push(cur); }
+      function checkHeader(line){
+        var sm = line.match(/(あわら店|松岡店|学園店)/);
+        var ym = line.match(/(\d{4})\s*年\s*(\d{1,2})\s*月/);
+        if (!sm && !ym) return false;
+        // a header line after a named block starts that person's own block,
+        // so a later header can never overwrite an earlier person's store/month
+        if (!cur || cur.name) newBlock();
+        if (sm) cur.store = sm[1];
+        if (ym){ cur.year = parseInt(ym[1],10); cur.month = parseInt(ym[2],10); }
+        return true;
+      }
+      var catKey = null; // current template category while scanning continuation lines
+      function setEntries(wish, days){
+        if (!cur) newBlock();
+        days.forEach(function(d){ if (d>=1 && d<=daysInMonth()) cur.entries[d] = wish; });
+      }
+      lines.forEach(function(raw){
+        var line = raw.trim(); if (!line) return;
+        if (/^【.*】/.test(line) || /^■/.test(line)){ checkHeader(line); catKey = null; return; }
+        var mName = line.match(/^名前\s*[:：]\s*(.+)$/);
+        if (mName){
+          var nm = mName[1].trim();
+          if (!cur || cur.name) newBlock();
+          cur.name = nm; catKey = null;
+          return;
+        }
+        if (checkHeader(line) && !/[:：]/.test(line)){ catKey = null; return; }
+        var mStoreOnly = line.match(/^店舗\s*[:：]\s*(.+)$/);
+        if (mStoreOnly){ if (!cur) newBlock(); var sm2 = mStoreOnly[1].match(/(あわら店|松岡店|学園店)/); if (sm2) cur.store = sm2[1]; catKey = null; return; }
+        var mMemo = line.match(/^メモ\s*[:：]\s*(.*)$/);
+        if (mMemo){ if (!cur) newBlock(); cur.memo = mMemo[1].trim(); catKey = null; return; }
+        var mCat = line.match(/^(希望休|昼のみ可|昼のみ|昼|夜のみ可|夜のみ|夜|両方可|両方)\s*[:：]\s*(.*)$/);
+        if (mCat){
+          if (!cur) newBlock();
+          var wv = mCat[1].indexOf('休')>=0 ? 'off' : (mCat[1].indexOf('両')>=0 ? 'both' : (mCat[1].indexOf('昼')>=0 ? 'lunch' : 'dinner'));
+          catKey = wv;
+          var val = mCat[2];
+          if (wv==='both' && /それ以外|全部|すべて|全て/.test(val)){ cur.expandBoth = true; return; }
+          if (/なし|無し|ナシ/.test(val)) return;
+          setEntries(wv, parseDayList(val));
+          return;
+        }
+        // continuation of a wrapped day list, e.g. a lone "13日" line under 希望休
+        if (catKey && /^[\d\s　、,・日]+$/.test(line)){ setEntries(catKey, parseDayList(line)); return; }
+        // legacy per-day lines: "12/5 昼" or "名前 12/5 両方"
+        var mFull = line.match(/^(.{1,12}?)[\s　]+(\d{1,2})[/月](\d{1,2})日?\s*(.*)$/);
+        var mDate = line.match(/(\d{1,2})[/月](\d{1,2})日?\s*(.*)$/);
+        if (mFull && !/^\d/.test(line)){
+          if (!cur || (cur.name && normName(cur.name) !== normName(mFull[1]))) newBlock();
+          cur.name = mFull[1].trim(); catKey = null;
+          if (parseInt(mFull[2],10) === state.month){
+            var w2 = wishFromWord(mFull[4] || '');
+            if (w2) setEntries(w2, [parseInt(mFull[3],10)]);
+          }
+          return;
+        }
+        if (mDate){
+          if (!cur) newBlock();
+          catKey = null;
+          if (parseInt(mDate[1],10) === state.month){
+            var w3 = wishFromWord(mDate[3] || '');
+            if (w3) setEntries(w3, [parseInt(mDate[2],10)]);
+          }
+          return;
+        }
+        // a bare name line starts a new block
+        if (line.length <= 12 && !/希望|シフト|可/.test(line)){
+          if (!cur || cur.name) newBlock();
+          cur.name = line; catKey = null;
+        }
+      });
+      // hard stop: any block naming another store or another month imports nothing
+      blocks.forEach(function(b){
+        if (mismatch) return;
+        if (b.store && b.store !== STORE_NAME) mismatch = '店舗が違います（「'+b.store+'」の文が混ざっています）。このページはあわら店専用です。その文は取り込まずに止めました。';
+        else if ((b.year && b.year !== state.year) || (b.month && b.month !== state.month)) mismatch = '対象月が違います（「'+(b.year?b.year+'年':'')+(b.month?b.month+'月':'')+'」の文が混ざっています）。表示中の '+state.year+'年'+state.month+'月 と違うため、その文は取り込まずに止めました。';
+      });
+      if (mismatch){ showMsg($('importMsg'), mismatch, false); return; }
+      /* Pass 2: apply blocks */
+      var added = 0, names = {}, unknown = [];
+      function ensureName(nm){
+        nm = String(nm || '').trim(); if (!nm) return null;
+        var found = findStaff(nm);
+        if (found) return found;
+        st.staff.push(nm); st.canDo[nm] = {};
+        DEFAULT_PATS.forEach(function(c){ st.canDo[nm][c] = 1; });
+        unknown.push(nm);
+        return nm;
+      }
+      blocks.forEach(function(b){
+        if (!b.name) return;
+        var nm = ensureName(b.name); if (!nm) return;
+        if (!M().wish[nm]) M().wish[nm] = {};
+        var keys = Object.keys(b.entries);
+        if (b.expandBoth){
+          for (var d=1; d<=daysInMonth(); d++){
+            if (isClosed(d)) continue;
+            if (b.entries[d]) continue;
+            b.entries[d] = 'both'; keys.push(String(d));
+          }
+        }
+        keys.forEach(function(k){ M().wish[nm][k] = b.entries[k]; added++; });
+        if (keys.length) names[nm] = 1;
+        if (b.memo) M().memo[nm] = b.memo;
+      });
+      var nNames = Object.keys(names).length;
+      if (added === 0) showMsg($('importMsg'), '読み取れる希望がありませんでした。「希望休：3日」「昼のみ可：1日」「両方可：それ以外全部」のような定型文か、日付（例：12/5）と「昼／夜／両方／休」が入っているか確認してください。', false);
+      else { markDirty(); showMsg($('importMsg'), nNames+'名・'+added+'件の希望を反映しました。' + (unknown.length ? '新規スタッフとして追加：'+unknown.join('、') : ''), true); }
+      renderAll();
+    }
+    $('importWish').addEventListener('click', importWishes);
+    $('clearWishText').addEventListener('click', function(){ $('wishText').value=''; });
+
+    /* ---------- auto assign ---------- */
+    function pickPattern(name, want, needL, needD){
+      var can = S().canDo[name] || {}, list = [];
+      PATTERNS.forEach(function(p){ if (can[p.code] && p.start!=null) list.push(p); });
+      function first(pred){ for (var i=0;i<list.length;i++) if (pred(list[i])) return list[i]; return null; }
+      if (want==='lunch'){
+        return first(function(p){ return covers(p,'lunch') && !covers(p,'dinner'); }) ||
+               (needL>0 ? first(function(p){ return covers(p,'lunch'); }) : null);
+      }
+      if (want==='dinner'){
+        return first(function(p){ return covers(p,'dinner') && !covers(p,'lunch'); }) ||
+               (needD>0 ? first(function(p){ return covers(p,'dinner'); }) : null);
+      }
+      if (needL>0 && needD>0){ var b = first(function(p){ return covers(p,'lunch') && covers(p,'dinner'); }); if (b) return b; }
+      if (needL>0){ var l = first(function(p){ return covers(p,'lunch') && !covers(p,'dinner'); }) || first(function(p){ return covers(p,'lunch'); }); if (l) return l; }
+      if (needD>0){ var dn = first(function(p){ return covers(p,'dinner') && !covers(p,'lunch'); }) || first(function(p){ return covers(p,'dinner'); }); if (dn) return dn; }
+      return null;
+    }
+    function autoAssign(){
+      if (isConfirmed()){ showMsg($('autoMsg'), '確定済みのため自動作成できません。「4. 確定と保存」で確定を取り消してから実行してください。', false); return; }
+      var st = S(), useNo = $('useNoWish').checked, placed = 0, offs = 0;
+      for (var d=1; d<=daysInMonth(); d++){
+        if (isClosed(d)) continue;
+        var need = needsFor(d);
+        var cnt = dayCounts(d), needL = need.lunch - cnt.lunch, needD = need.dinner - cnt.dinner;
+        st.staff.forEach(function(name){
+          if (getCell(name, d)) return;
+          if (getWish(name, d)==='off'){ setCell(name, d, OFF); offs++; }
+        });
+        var order = st.staff.slice();
+        order.sort(function(a, b){
+          var rank = function(w){ return w==='both' ? 0 : (w==='lunch'||w==='dinner') ? 1 : 2; };
+          return rank(getWish(a, d)) - rank(getWish(b, d));
+        });
+        for (var i=0;i<order.length;i++){
+          if (needL<=0 && needD<=0) break;
+          var name = order[i];
+          if (getCell(name, d)) continue;
+          var w = getWish(name, d);
+          if (w==='off') continue;
+          if (!w && !useNo) continue;
+          var p = pickPattern(name, w || 'both', needL, needD);
+          if (!p) continue;
+          setCell(name, d, p.code); placed++;
+          if (covers(p,'lunch')) needL--;
+          if (covers(p,'dinner')) needD--;
+        }
+      }
+      showMsg($('autoMsg'), '下書きを作りました：配置 '+placed+'件、希望休 '+offs+'件。足りない日は下の「不足」一覧とシフト表で確認して、タップで直してください。', true);
+      renderMatrix(); renderStaffSettings(); renderLockState();
+    }
+    $('autoBtn').addEventListener('click', autoAssign);
+    $('clearAssign').addEventListener('click', function(){
+      if (isConfirmed()){ showMsg($('autoMsg'), '確定済みのため消せません。「4. 確定と保存」で確定を取り消してから実行してください。', false); return; }
+      var st = S();
+      st.staff.forEach(function(n){ M().cells[n] = {}; });
+      markDirty();
+      showMsg($('autoMsg'), state.store+'の配置を全部消しました（希望は残っています）。', true);
+      renderMatrix(); renderStaffSettings(); renderLockState();
+    });
+
+    /* ---------- LINE export ---------- */
+    function makeLineText(){
+      var st = S(), out = ['【確定シフト】'+state.store+' '+state.year+'年'+state.month+'月'];
+      st.staff.forEach(function(name){
+        var c = M().cells[name] || {}, parts = [];
+        for (var d=1; d<=daysInMonth(); d++){
+          if (c[d] && c[d] !== OFF) parts.push(state.month+'/'+d+'('+WD[dowOf(d)]+') '+c[d]);
+        }
+        if (parts.length){ out.push(name+'さん（合計 '+fmtHours(staffHours(name))+'）'); out.push(parts.join('、')); }
+      });
+      out.push('よろしくお願いします。');
+      $('lineText').value = out.join('\n');
+      $('copyLine').disabled = false;
+    }
+    $('makeLine').addEventListener('click', makeLineText);
+    function copyTo(text, msgEl, okText){
+      function done(){ showMsg(msgEl, okText, true); }
+      function fallback(){
+        var ta = document.createElement('textarea'); ta.value = text;
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch(e){ showMsg(msgEl, 'コピーできませんでした。文を選択して手でコピーしてください。', false); }
+        document.body.removeChild(ta);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+      else fallback();
+    }
+    $('copyLine').addEventListener('click', function(){ copyTo($('lineText').value, $('copyMsg'), 'LINE用テキストをコピーしました。'); });
+
+    /* ---------- data export / import ---------- */
+    function doExportData(){
+      var data = { v:3, store: STORE_NAME, year: state.year, month: state.month, stores: state.stores,
+        patterns: PATTERNS.map(function(p){ return {code:p.code, start:p.start, end:p.end, hours:p.hours}; }) };
+      $('dataText').value = JSON.stringify(data);
+      $('copyData').disabled = false;
+    }
+    $('exportData').addEventListener('click', function(){
+      doExportData();
+      showMsg($('dataMsg'), '作業データを書き出しました。コピーしてメモなどに控えてください。', true);
+    });
+    $('copyData').addEventListener('click', function(){ copyTo($('dataText').value, $('dataMsg'), '作業データをコピーしました。'); });
+    $('importData').addEventListener('click', function(){
+      var raw = $('dataText').value.trim();
+      if (!raw){ showMsg($('dataMsg'), '読み込むデータが貼られていません。', false); return; }
+      try {
+        var data = JSON.parse(raw);
+        if (!data.stores) throw new Error('bad');
+        STORES.forEach(function(s){
+          if (data.stores[s]){
+            var got = data.stores[s];
+            got.canDo = got.canDo || {}; got.months = got.months || {};
+            got.needs = got.needs || {wdL:2, wdD:2, weL:3, weD:3};
+            got.staff = got.staff || [];
+            state.stores[s] = got;
+          }
+        });
+        if (data.year && data.month){ state.year = data.year; state.month = data.month; }
+        if (data.patterns && data.v >= 3) data.patterns.forEach(function(sp){
+          var p = patByCode(sp.code); if (p){ p.start = sp.start; p.end = sp.end; p.hours = sp.hours; }
+        });
+        persistAuto();
+        showMsg($('dataMsg'), '作業データを読み込みました。この内容で自動保存も更新しました。', true);
+        renderAll();
+      } catch(e){ showMsg($('dataMsg'), '読み込めませんでした。書き出した文をそのまま貼ってください。', false); }
+    });
+
+    /* ---------- lock + save set ---------- */
+    $('confirmBtn').addEventListener('click', function(){
+      var m = M();
+      m.confirmed = true; markDirty();
+      showMsg($('confirmMsg'), state.year+'年'+state.month+'月のシフトを確定しました。表は固定されています。続けて下の「保存データをコピーする」を押して、保険用バックアップを自分のLINE（Keepメモや自分だけのトーク）に保管してください。', true);
+      renderLockState();
+    });
+    $('unconfirmBtn').addEventListener('click', function(){
+      var m = M();
+      m.confirmed = false; markDirty();
+      showMsg($('confirmMsg'), '確定を取り消しました。表を編集できるようになりました。直したら、もう一度確定してください。', true);
+      renderLockState();
+    });
+    $('saveSetBtn').addEventListener('click', function(){
+      makeLineText();
+      var m = M();
+      m.saved = true;
+      var now = new Date();
+      m.savedAt = (now.getMonth()+1)+'/'+now.getDate()+' '+('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+      doExportData();
+      persistAuto();
+      showMsg($('confirmMsg'), '保存セットを書き出しました。上の「作業データ」と「LINE用テキスト」を、それぞれコピーして控えてください（作業データ＝機種変更など万一のときの復元用、LINE用テキスト＝店舗グループ送信用）。普段の入力は自動保存されています。', true);
+      showMsg($('dataMsg'), '作業データを書き出しました。コピーしてメモなどに控えてください。', true);
+      renderLockState();
+    });
+
+    /* ---------- shift table image export (for the store group LINE) ---------- */
+    function exportShiftImage(){
+      var st = S(), n = daysInMonth(), d, i, j;
+      var scale = 2, pad = 24;
+      var nameW = 172, cellW = 36, cellH = 34, headH = 42, titleH = 62;
+      var legendCols = 3, legendRowH = 26, legendTitleH = 30;
+      var W = pad*2 + nameW + cellW*n;
+      var matrixH = headH + cellH*st.staff.length;
+      var legendRows = Math.ceil(PATTERNS.length/legendCols);
+      var legendH = legendTitleH + legendRows*legendRowH;
+      var H = pad + titleH + matrixH + 20 + legendH + 24 + pad;
+      var cv = document.createElement('canvas');
+      cv.width = W*scale; cv.height = H*scale;
+      var ctx = cv.getContext('2d');
+      ctx.scale(scale, scale);
+      var FONT = '"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,sans-serif';
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+      ctx.textBaseline = 'alphabetic';
+      // title
+      ctx.fillStyle = '#23201c'; ctx.font = '700 25px ' + FONT; ctx.textAlign = 'left';
+      ctx.fillText('あわら店 ' + state.year + '年' + state.month + '月 シフト表', pad, pad + 30);
+      ctx.font = '13px ' + FONT; ctx.fillStyle = '#5c564d';
+      ctx.fillText(isConfirmed() ? '確定済み' : '未確定（下書き）', pad, pad + 52);
+      var x0 = pad, y0 = pad + titleH;
+      function cellBorder(x, y, w, h){ ctx.strokeStyle = '#d8d2c6'; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, w, h); }
+      function dayColor(dd){
+        if (isClosed(dd)) return '#8a8378';
+        var w = dowOf(dd);
+        if (w === 0 || HOLIDAYS[state.year+'-'+state.month+'-'+dd] === 1) return '#c22f2f';
+        if (w === 6) return '#2057b8';
+        return '#23201c';
+      }
+      // matrix header
+      ctx.fillStyle = '#faf7f2'; ctx.fillRect(x0, y0, nameW, headH); cellBorder(x0, y0, nameW, headH);
+      ctx.fillStyle = '#23201c'; ctx.font = '700 12px ' + FONT; ctx.textAlign = 'left';
+      ctx.fillText('スタッフ / 月合計', x0 + 8, y0 + 26);
+      for (d = 1; d <= n; d++){
+        var hx = x0 + nameW + cellW*(d-1);
+        ctx.fillStyle = isClosed(d) ? '#efefef' : '#faf7f2'; ctx.fillRect(hx, y0, cellW, headH); cellBorder(hx, y0, cellW, headH);
+        ctx.fillStyle = dayColor(d); ctx.textAlign = 'center';
+        ctx.font = '800 14px ' + FONT; ctx.fillText(String(d), hx + cellW/2, y0 + 18);
+        ctx.font = '11px ' + FONT; ctx.fillText(WD[dowOf(d)], hx + cellW/2, y0 + 34);
+      }
+      // matrix rows
+      st.staff.forEach(function(name, ri){
+        var ry = y0 + headH + cellH*ri;
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, ry, nameW, cellH); cellBorder(x0, ry, nameW, cellH);
+        var nm = name; ctx.font = '700 13px ' + FONT;
+        while (ctx.measureText(nm).width > nameW - 66 && nm.length > 1) nm = nm.slice(0, -1);
+        if (nm !== name) nm += '…';
+        ctx.fillStyle = '#23201c'; ctx.textAlign = 'left'; ctx.fillText(nm, x0 + 8, ry + 21);
+        ctx.font = '12px ' + FONT; ctx.fillStyle = '#5c564d'; ctx.textAlign = 'right';
+        ctx.fillText(fmtHours(staffHours(name)), x0 + nameW - 8, ry + 21);
+        for (d = 1; d <= n; d++){
+          var cx = x0 + nameW + cellW*(d-1);
+          if (isClosed(d)){ ctx.fillStyle = '#f1f1f1'; ctx.fillRect(cx, ry, cellW, cellH); cellBorder(cx, ry, cellW, cellH); continue; }
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(cx, ry, cellW, cellH); cellBorder(cx, ry, cellW, cellH);
+          var code = getCell(name, d);
+          if (!code) continue;
+          ctx.textAlign = 'center';
+          if (code === OFF){
+            ctx.fillStyle = '#8a8378'; ctx.font = '600 13px ' + FONT;
+            ctx.fillText('ー', cx + cellW/2, ry + 22);
+          } else {
+            var p = patByCode(code); if (!p) continue;
+            ctx.fillStyle = p.bg; ctx.fillRect(cx + 2, ry + 4, cellW - 4, cellH - 8);
+            ctx.fillStyle = p.fg; ctx.font = '800 12px ' + FONT;
+            ctx.fillText(p.code, cx + cellW/2, ry + 22);
+          }
+        }
+      });
+      // pattern legend
+      var ly = y0 + matrixH + 20;
+      ctx.fillStyle = '#23201c'; ctx.font = '700 16px ' + FONT; ctx.textAlign = 'left';
+      ctx.fillText('シフトパターン', pad, ly + 20);
+      var colW = (W - pad*2)/legendCols;
+      PATTERNS.forEach(function(p, idx){
+        var col = idx % legendCols, row = Math.floor(idx/legendCols);
+        var ex = pad + col*colW, ey = ly + legendTitleH + row*legendRowH;
+        ctx.fillStyle = p.bg; ctx.fillRect(ex, ey + 2, 34, 18);
+        ctx.fillStyle = p.fg; ctx.font = '800 11px ' + FONT; ctx.textAlign = 'center';
+        ctx.fillText(p.code, ex + 17, ey + 15);
+        ctx.fillStyle = '#23201c'; ctx.font = '12.5px ' + FONT; ctx.textAlign = 'left';
+        ctx.fillText(p.name + ' ' + patTimeText(p) + '（実働' + fmtHours(p.hours) + '）', ex + 40, ey + 15);
+      });
+      var oy = ly + legendH + 4;
+      ctx.fillStyle = '#8a8378'; ctx.font = '12.5px ' + FONT; ctx.textAlign = 'left';
+      ctx.fillText('ー 休み', pad, oy + 15);
+      var url = cv.toDataURL('image/png');
+      $('shiftImg').src = url;
+      $('shiftImgWrap').style.display = 'block';
+      var dl = $('shiftImgDl');
+      dl.href = url; dl.style.display = '';
+      dl.setAttribute('download', 'あわら店シフト_' + state.year + '年' + state.month + '月.png');
+      showMsg($('imgMsg'), isConfirmed()
+        ? 'シフト表の画像を作りました。保存して、あわら店のグループLINEに送ってください。'
+        : '画像を作りました（まだ未確定の下書きです）。スタッフへ送る前に「確定する」を押してください。', true);
+    }
+    $('imgBtn').addEventListener('click', exportShiftImage);
+
+    /* ---------- misc controls ---------- */
+    $('addStaff').addEventListener('click', function(){
+      var nm = $('newStaffName').value.trim();
+      if (!nm) return;
+      var st = S();
+      if (findStaff(nm)){ $('newStaffName').value=''; return; }
+      markDirty();
+      st.staff.push(nm); st.canDo[nm] = {};
+      DEFAULT_PATS.forEach(function(c){ st.canDo[nm][c] = 1; });
+      $('newStaffName').value = '';
+      persistAuto();
+      renderAll();
+    });
+    $('prevMonth').addEventListener('click', function(){
+      state.month--; if (state.month<1){ state.month=12; state.year--; } persistAuto(); renderAll();
+    });
+    $('nextMonth').addEventListener('click', function(){
+      state.month++; if (state.month>12){ state.month=1; state.year++; } persistAuto(); renderAll();
+    });
+    /* ---------- one-tap insurance backup ---------- */
+    $('backupCopyBtn').addEventListener('click', function(){
+      doExportData();
+      copyTo($('dataText').value, $('backupMsg'), '保存データをコピーしました。このまま自分のLINEのKeepメモや、自分だけのトークに貼って保管してください。万一のときは、その文を下の「作業データの読み込み」に貼れば元に戻せます。');
+    });
+
+    /* ---------- environment & save-persistence check ---------- */
+    var PROBE_KEY = 'awaraShiftSaveProbeV1';
+    function detectInApp(){
+      var ua = navigator.userAgent || '';
+      if (/Line\//i.test(ua)) return 'LINE';
+      if (/FBAN|FBAV/i.test(ua)) return 'Facebook';
+      if (/Instagram/i.test(ua)) return 'Instagram';
+      if (/; wv\)/.test(ua)) return 'アプリ';
+      if (/(iPhone|iPad|iPod)/i.test(ua) && !/Safari/i.test(ua)) return 'アプリ';
+      return null;
+    }
+    function storageWorks(){
+      try {
+        localStorage.setItem('__awara_probe_test__', '1');
+        var ok = localStorage.getItem('__awara_probe_test__') === '1';
+        localStorage.removeItem('__awara_probe_test__');
+        return ok;
+      } catch(e){ return false; }
+    }
+    function isStandalone(){
+      try {
+        if (window.navigator.standalone) return true;
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+      } catch(e){}
+      return false;
+    }
+    function runSaveCheck(){
+      var works = storageWorks();
+      var survived = false;
+      try {
+        survived = !!localStorage.getItem(PROBE_KEY);
+        localStorage.setItem(PROBE_KEY, new Date().toISOString());
+      } catch(e){}
+      if (navigator.storage && navigator.storage.persist){
+        try { var pr = navigator.storage.persist(); if (pr && pr.catch) pr.catch(function(){}); } catch(e){}
+      }
+      var app = detectInApp(), standalone = isStandalone();
+      if (!works){
+        $('envWarnTitle').textContent = 'この開き方では保存ができません';
+        $('envWarnText').textContent = '今のブラウザでは自動保存が使えません（プライベートモードなど）。このまま入力すると、閉じたときに消えてしまいます。Safariの通常モードで開き直してください。';
+        $('envWarn').className = 'envwarn show';
+      } else if (app && !standalone){
+        $('envWarnTitle').textContent = app + 'の中では、入力が消えることがあります';
+        $('envWarnText').textContent = '今は' + app + 'のアプリ内ブラウザで開いています。アプリ内ブラウザは、アプリをタスクキル（完全に終了）すると保存が一緒に消えることがあります。黙って消えてしまうのを防ぐため、下の手順でSafariで開き直して、ホーム画面に追加してください。';
+        $('envWarn').className = 'envwarn show';
+      }
+      var sc = $('saveCheckStatus');
+      if (!works){
+        sc.textContent = '保存チェック：保存が使えません。上の案内に沿って開き直してください。';
+      } else if (standalone){
+        sc.textContent = '保存チェック：ホーム画面から開いています。保存が残りやすい開き方です。';
+        sc.className = 'savecheck ok';
+      } else if (survived){
+        sc.textContent = '保存チェック：前回の保存が残っていることを確認しました。この開き方で自動保存が効いています。';
+        sc.className = 'savecheck ok';
+      } else {
+        sc.textContent = '保存チェック：この開き方で保存が残るかは、次に開いたときに自動で判定します。';
+      }
+    }
+
+    bindNeeds();
+    var restoredAuto = restoreAuto();
+    renderAll();
+    runSaveCheck();
+    if (restoredAuto){
+      showMsg($('importMsg'), '前回の入力を自動保存から復元しました（'+fmtAutoTime(lastAutoSavedAt)+' 保存分）。閉じる前の状態からそのまま続けられます。', true);
+    }
+    </script>
+  </body>
+</html>
